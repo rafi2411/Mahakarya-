@@ -1,0 +1,118 @@
+```{r}
+#install.packages("rvest")
+#install.packages("tidyverse")
+#install.packages("rio")
+#install.packages("kableExtra")
+```
+
+```{r}
+library(rvest)
+library(tidyverse)
+library(rio)
+library(kableExtra) 
+
+```
+
+```{r}
+page = 1
+cut2 = " "
+output = data.frame()
+cut = " - "
+for( i in 1:page)
+{
+  pabrik_values <- c()
+seri_values <- c()
+url <- paste("https://www.carmudi.co.id/mobil-dijual/indonesia?type=used&page_number=",i,"&page_size=25", sep="")
+temp <- read_html(url)
+###
+nama <-html_nodes(temp, "a.ellipsize.js-ellipsize-text") %>% html_text2()
+Merek <- substr(nama, 6, nchar(nama))
+kotak <- html_nodes(temp,"div.item.push-quarter--ends") %>% html_text2()
+###
+newold <- html_nodes(temp,"span.listing__type.text--white.absolute.bottom--right.soft-quarter") %>% html_text2()
+o=0
+for(t in 1:nrow(as.matrix(kotak)))
+{
+  if(t==1+o)
+  {
+    if(t==1){Jarak <- data.frame(kotak[t])}
+    else{Jarak <- rbind(Jarak,kotak[t])}
+  }
+  if(t==2+o)
+    {
+     if(t==2){Tipe <- data.frame(kotak[t])}
+     else{Tipe <- rbind(Tipe,kotak[t])}
+  }
+  if(t==3+o)
+    {
+     if(t==3){Daerah <- data.frame(kotak[t])}
+     else{Daerah <- rbind(Daerah,kotak[t])}
+  }
+  if(t%%4==0)
+  {o=o+4}
+}
+Harga <- html_nodes(temp,"div.listing__price.delta.weight--bold") %>% html_text2() %>% gsub("Rp ","",.)
+for(p in Merek)
+{
+  bagian_kalimat <- unlist(strsplit(p, cut2))
+  pabrik <- head(bagian_kalimat, n = 1)
+  pabrik_values <- c(pabrik_values, pabrik)
+}
+
+for(c in Merek)
+{
+  bagian_kalimat <- unlist(strsplit(c, cut2))
+  Bcuted <- paste(bagian_kalimat[-1], collapse = " ")
+  bagian_kalimat2 <- unlist(strsplit(Bcuted, cut))
+  cuted <- head(bagian_kalimat2, n = 1)
+  seri_values <- c(seri_values, cuted)
+}
+
+links <- temp %>% html_nodes("a.ellipsize.js-ellipsize-text") %>% html_attr("href")
+Pintu = c()
+Kursi = c()
+CC = c()
+Warna = c()
+for(l in links)
+{
+  Web <- read_html(l)
+  All <- Web %>% html_nodes("span.u-text-bold.u-align-right") %>% html_text2()
+  ###
+  warna <- Web %>% html_nodes("span.u-text-bold.u-block") %>% html_text2()
+  if(is.na(as.integer(All[4])))
+  {
+    Warna <- c(Warna, warna[4])
+    Pintu <- c(Pintu,All[2])
+    Kursi <- c(Kursi,All[3])
+    CC <- c(CC,All[5])
+  }
+  else 
+  {
+    Warna <- c(Warna, warna[4])
+    Pintu <- c(Pintu,All[3])
+    Kursi <- c(Kursi,All[4])
+    CC <- c(CC,All[6]) 
+  }
+}
+
+# Buat data frame dari vektor/list yang sudah diisi
+Pabrik <- data.frame(Pabrik = pabrik_values)
+Seri <- data.frame(Seri = seri_values)
+tahun <- substr(nama, 1, 4)
+###
+gab<- cbind(Pabrik,Seri,tahun,newold,Warna, Jarak, Tipe, Pintu, Kursi, CC, Daerah, Harga)
+colnames(gab) <-(c("Pabrik","Seri","Tahun","newold","Warna", "Jarak", "Tipe","Pintu","Kursi","CC", "Daerah", "Harga"))
+output <- rbind(output,gab)
+print(paste("done ", i, sep = ""))
+}
+print(output)
+```
+
+
+```{r}
+library(openxlsx)
+setwd("C:/Users/ASUS A416/Documents/Semester 5/PSD")
+write.xlsx(output, "carmodi_kel1.xlsx")
+```
+
+
